@@ -32,31 +32,68 @@
   </div>
 
   <script>
+    function ensureKakaoMapsLoaded(callback) {
+      if (window.kakao && window.kakao.maps && window.kakao.maps.services) {
+        callback();
+        return;
+      }
+
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerText = "🧩 카카오 지도 SDK를 불러오는 중...";
+
+      const existingScript = document.querySelector('script[src*="dapi.kakao.com/v2/maps/sdk.js"]');
+      if (existingScript) {
+        existingScript.addEventListener('load', callback, { once: true });
+        existingScript.addEventListener('error', () => {
+          statusDiv.innerText = "❌ 카카오 지도 SDK 로딩에 실패했습니다. 잠시 후 다시 시도해 주세요.";
+        }, { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=348a7e0d36802b7716e6aa4b8f1eafae&libraries=services';
+      script.async = true;
+      script.onload = callback;
+      script.onerror = () => {
+        statusDiv.innerText = "❌ 카카오 지도 SDK 로딩에 실패했습니다. 잠시 후 다시 시도해 주세요.";
+      };
+      document.head.appendChild(script);
+    }
+
     function startLunchSearch() {
       const statusDiv = document.getElementById('status');
       const resultDiv = document.getElementById('result');
       
       resultDiv.innerHTML = '';
-      statusDiv.innerText = "📍 위치 정보 받아오는 중...";
 
-      // GPS 위치 받아오기 (실패 시 기본 강남역 좌표 사용)
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          position => {
-            searchPlaces(position.coords.latitude, position.coords.longitude);
-          },
-          error => {
-            searchPlaces(37.497952, 127.027619);
-          },
-          { timeout: 3000 }
-        );
-      } else {
-        searchPlaces(37.497952, 127.027619);
-      }
+      ensureKakaoMapsLoaded(() => {
+        statusDiv.innerText = "📍 위치 정보 받아오는 중...";
+
+        // GPS 위치 받아오기 (실패 시 기본 강남역 좌표 사용)
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            position => {
+              searchPlaces(position.coords.latitude, position.coords.longitude);
+            },
+            error => {
+              searchPlaces(37.497952, 127.027619);
+            },
+            { timeout: 3000 }
+          );
+        } else {
+          searchPlaces(37.497952, 127.027619);
+        }
+      });
     }
 
     function searchPlaces(lat, lng) {
       const statusDiv = document.getElementById('status');
+
+      if (!window.kakao || !window.kakao.maps || !window.kakao.maps.services) {
+        statusDiv.innerText = "❌ 카카오 지도 SDK를 사용할 수 없습니다.";
+        return;
+      }
+
       statusDiv.innerText = "🔍 주변 500m 식당 검색 중...";
 
       // 카카오 키워드/카테고리 검색 객체
