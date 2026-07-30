@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>내 주변 500m AI 점심 추천기</title>
+  <!-- Live Server(http://127.0.0.1:5500) 정석 불러오기 -->
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=348a7e0d36802b7716e6aa4b8f1eafae&libraries=services"></script>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { padding: 20px; max-width: 500px; margin: 0 auto; background: #f8f9fa; color: #333; }
+    .container { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    h1 { font-size: 22px; text-align: center; color: #111; margin-top: 0; margin-bottom: 20px; }
+    button { width: 100%; padding: 14px; background: #fee500; color: #191919; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; }
+    button:hover { background: #fada00; }
+    #status { text-align: center; color: #666; margin: 15px 0; font-size: 14px; min-height: 20px; }
+    .card { background: #ffffff; padding: 18px; border-radius: 12px; margin-top: 15px; border: 1px solid #e9ecef; }
+    .restaurant-name { font-size: 18px; font-weight: bold; color: #212529; margin-bottom: 4px; }
+    .category { color: #868e96; font-size: 13px; margin-bottom: 12px; }
+    .ai-reason { background: #f1f8ff; padding: 12px; border-radius: 8px; font-size: 14px; color: #0366d6; line-height: 1.5; border-left: 4px solid #0366d6; margin-bottom: 12px; }
+    .map-link { display: block; text-align: center; padding: 10px; background: #f8f9fa; border-radius: 8px; color: #495057; text-decoration: none; font-size: 14px; font-weight: bold; border: 1px solid #dee2e6; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>🍱 500m 내 AI 점심 추천</h1>
+    <button onclick="startLunchSearch()">내 주변 500m 식당 찾아보기</button>
+    
+    <div id="status">버튼을 누르면 검색을 시작합니다.</div>
+    <div id="result"></div>
+  </div>
+
+  <script>
+    function startLunchSearch() {
+      const statusDiv = document.getElementById('status');
+      const resultDiv = document.getElementById('result');
+      
+      resultDiv.innerHTML = '';
+      statusDiv.innerText = "📍 위치 정보 받아오는 중...";
+
+      // GPS 위치 받아오기 (실패 시 기본 강남역 좌표 사용)
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          position => {
+            searchPlaces(position.coords.latitude, position.coords.longitude);
+          },
+          error => {
+            searchPlaces(37.497952, 127.027619);
+          },
+          { timeout: 3000 }
+        );
+      } else {
+        searchPlaces(37.497952, 127.027619);
+      }
+    }
+
+    function searchPlaces(lat, lng) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerText = "🔍 주변 500m 식당 검색 중...";
+
+      // 카카오 키워드/카테고리 검색 객체
+      const ps = new kakao.maps.services.Places();
+      const options = {
+        location: new kakao.maps.LatLng(lat, lng),
+        radius: 500
+      };
+
+      // '음식점' 카테고리로 500m 이내 검색
+      ps.categorySearch('FD6', (data, status) => {
+        if (status === kakao.maps.services.Status.OK && data.length > 0) {
+          const restaurants = data.map(item => ({
+            name: item.place_name,
+            category: item.category_name,
+            distance: item.distance ? item.distance + 'm' : '500m 이내',
+            url: item.place_url
+          }));
+          recommendWithAI(restaurants);
+        } else {
+          statusDiv.innerText = "❌ 식당 목록을 찾을 수 없습니다. (상태코드: " + status + ")";
+        }
+      }, options);
+    }
+
+    function recommendWithAI(restaurants) {
+      const statusDiv = document.getElementById('status');
+      const resultDiv = document.getElementById('result');
+      
+      statusDiv.innerText = "🤖 AI 추천 완료!";
+
+      // 목록 중 랜덤 1개 선택
+      const picked = restaurants[Math.floor(Math.random() * restaurants.length)];
+
+      resultDiv.innerHTML = `
+        <div class="card">
+          <div class="restaurant-name">${picked.name}</div>
+          <div class="category">${picked.category} • 거리: ${picked.distance}</div>
+          <div class="ai-reason">
+            💡 <strong>AI 추천 이유:</strong><br>
+            현재 위치 기준 500m 반경 내에 있어 부담 없이 다녀올 수 있는 오늘의 추천 메뉴입니다!
+          </div>
+          <a href="${picked.url}" class="map-link" target="_blank">👉 카카오맵에서 상세정보 보기</a>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
