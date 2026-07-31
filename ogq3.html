@@ -17,6 +17,7 @@
     .result-layout { display: flex; flex-direction: column; gap: 16px; }
     .map-panel { min-height: 240px; border-radius: 16px; overflow: hidden; background: #e9ecef; }
     .map-panel #map { width: 100%; height: 100%; min-height: 240px; }
+    .cards-column { display:flex; flex-direction:column; gap:12px; }
     .card { background: #ffffff; padding: 18px; border-radius: 12px; margin-top: 0; border: 1px solid #e9ecef; }
     .restaurant-name { font-size: 18px; font-weight: bold; color: #212529; margin-bottom: 4px; }
     .category { color: #868e96; font-size: 13px; margin-bottom: 12px; }
@@ -34,6 +35,17 @@
   <div class="container">
     <h1>🍱 500m 내 AI 점심 추천</h1>
     <button onclick="startLunchSearch()">내 주변 500m 식당 찾아보기</button>
+    <div id="count-control" style="margin-top:12px; display:flex; gap:8px; align-items:center;">
+      <label for="resultCountSelect" style="font-size:14px; color:#555;">결과 수:</label>
+      <select id="resultCountSelect" style="padding:8px; border-radius:8px; border:1px solid #ddd;">
+        <option value="1">1</option>
+        <option value="3" selected>3</option>
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="custom">직접 설정</option>
+      </select>
+      <input id="customCount" type="number" min="1" max="50" value="3" style="display:none; padding:8px; width:84px; border-radius:8px; border:1px solid #ddd;" />
+    </div>
     
     <div id="status">버튼을 누르면 검색을 시작합니다.</div>
     <div id="result"></div>
@@ -83,6 +95,9 @@
       
       resultDiv.innerHTML = '';
 
+      // 선택된 결과 수 가져오기
+      const count = getSelectedCount();
+
       ensureKakaoMapsLoaded(() => {
         statusDiv.innerText = "📍 위치 정보 받아오는 중...";
 
@@ -90,26 +105,48 @@
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             position => {
-              searchPlaces(position.coords.latitude, position.coords.longitude);
+              searchPlaces(position.coords.latitude, position.coords.longitude, count);
             },
             error => {
-              searchPlaces(37.497952, 127.027619);
+              searchPlaces(37.497952, 127.027619, count);
             },
             { timeout: 3000 }
           );
         } else {
-          searchPlaces(37.497952, 127.027619);
+          searchPlaces(37.497952, 127.027619, count);
         }
       });
     }
 
-    function searchPlaces(lat, lng) {
+    function getSelectedCount() {
+      const sel = document.getElementById('resultCountSelect');
+      const custom = document.getElementById('customCount');
+      if (!sel) return 3;
+      const val = sel.value;
+      if (val === 'custom') {
+        const n = parseInt(custom.value, 10);
+        return (isNaN(n) || n < 1) ? 1 : n;
+      }
+      return parseInt(val, 10) || 3;
+    }
+
+    // show/hide custom input
+    document.addEventListener('DOMContentLoaded', () => {
+      const sel = document.getElementById('resultCountSelect');
+      const custom = document.getElementById('customCount');
+      sel.addEventListener('change', () => {
+        if (sel.value === 'custom') custom.style.display = 'inline-block';
+        else custom.style.display = 'none';
+      });
+    });
+
+    function searchPlaces(lat, lng, count) {
       const statusDiv = document.getElementById('status');
 
       if (!window.kakao || !window.kakao.maps || !window.kakao.maps.services) {
         const fallbackRestaurants = getFallbackRestaurants();
         statusDiv.innerText = "⚠️ 카카오 검색 연결이 없어 기본 추천 목록으로 표시합니다.";
-        recommendWithAI(fallbackRestaurants, true);
+        recommendWithAI(fallbackRestaurants, true, count);
         return;
       }
 
@@ -133,67 +170,85 @@
             lat: Number(item.y),
             lng: Number(item.x)
           }));
-          recommendWithAI(restaurants, false);
+          recommendWithAI(restaurants, false, count);
         } else {
           const fallbackRestaurants = getFallbackRestaurants();
           statusDiv.innerText = "⚠️ 주변 검색 결과가 없어 기본 추천 목록으로 표시합니다.";
-          recommendWithAI(fallbackRestaurants, true);
+          recommendWithAI(fallbackRestaurants, true, count);
         }
       }, options);
     }
 
-    function recommendWithAI(restaurants, isFallback) {
+    function recommendWithAI(restaurants, isFallback, count) {
       const statusDiv = document.getElementById('status');
       const resultDiv = document.getElementById('result');
       
       statusDiv.innerText = isFallback ? "⚠️ 기본 추천 결과입니다." : "🤖 AI 추천 완료!";
 
-      // 목록 중 랜덤 1개 선택
-      const picked = restaurants[Math.floor(Math.random() * restaurants.length)];
+      // 몇 개 보여줄지 결정
+      const showCount = Math.max(1, Math.min(restaurants.length, count || 1));
+      // 랜덤 샘플로 선택
+      const shuffled = restaurants.slice().sort(() => Math.random() - 0.5);
+      const picks = shuffled.slice(0, showCount);
+
       const mapHtml = isFallback ? '' : `
         <div class="map-panel">
           <div id="map"></div>
         </div>
       `;
 
+      const cardsHtml = picks.map(p => `
+        <div class="card">
+          <div class="restaurant-name">${p.name}</div>
+          <div class="category">${p.category} • 거리: ${p.distance}</div>
+          <div class="ai-reason">
+            💡 <strong>AI 추천 이유:</strong><br>
+            현재 위치 기준 500m 반경 내에 있어 부담 없이 다녀올 수 있는 오늘의 추천 메뉴입니다!
+          </div>
+          <a href="${p.url}" class="map-link" target="_blank">👉 카카오맵에서 상세정보 보기</a>
+        </div>
+      `).join('');
+
       resultDiv.innerHTML = `
         <div class="result-layout">
           ${mapHtml}
-          <div class="card">
-            <div class="restaurant-name">${picked.name}</div>
-            <div class="category">${picked.category} • 거리: ${picked.distance}</div>
-            <div class="ai-reason">
-              💡 <strong>AI 추천 이유:</strong><br>
-              현재 위치 기준 500m 반경 내에 있어 부담 없이 다녀올 수 있는 오늘의 추천 메뉴입니다!
-            </div>
-            <a href="${picked.url}" class="map-link" target="_blank">👉 카카오맵에서 상세정보 보기</a>
+          <div class="cards-column">
+            ${cardsHtml}
           </div>
         </div>
       `;
 
-      if (!isFallback && picked.lat && picked.lng) {
-        renderMap(picked.lat, picked.lng, picked.name);
+      if (!isFallback && picks.some(x => x.lat && x.lng)) {
+        renderMap(picks);
       }
     }
-
-    function renderMap(lat, lng, label) {
+    function renderMap(picks) {
       const mapContainer = document.getElementById('map');
       if (!mapContainer || !window.kakao || !window.kakao.maps) return;
 
       const map = new window.kakao.maps.Map(mapContainer, {
-        center: new window.kakao.maps.LatLng(lat, lng),
+        center: new window.kakao.maps.LatLng(picks[0].lat || 37.497952, picks[0].lng || 127.027619),
         level: 4
       });
 
-      const marker = new window.kakao.maps.Marker({
-        position: new window.kakao.maps.LatLng(lat, lng)
-      });
-      marker.setMap(map);
+      const bounds = new window.kakao.maps.LatLngBounds();
 
-      const infowindow = new window.kakao.maps.InfoWindow({
-        content: `<div style="padding:8px 12px; font-size:14px;">${label}</div>`
+      picks.forEach(p => {
+        if (!p.lat || !p.lng) return;
+        const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
+        const marker = new window.kakao.maps.Marker({ position: pos });
+        marker.setMap(map);
+        bounds.extend(pos);
+
+        const infowindow = new window.kakao.maps.InfoWindow({
+          content: `<div style="padding:8px 12px; font-size:14px;">${p.name}</div>`
+        });
+        infowindow.open(map, marker);
       });
-      infowindow.open(map, marker);
+
+      if (!bounds.isEmpty()) {
+        map.setBounds(bounds);
+      }
     }
   </script>
 </body>
