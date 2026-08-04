@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 import requests
 
 PORT = int(os.getenv("PORT", "8001"))
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq").lower()
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini").lower()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
@@ -207,5 +207,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    print(f"AI proxy server started at http://127.0.0.1:{PORT} using {LLM_PROVIDER}")
+    print(f"Gemini proxy server started at http://127.0.0.1:{PORT}")
     server.serve_forever()
