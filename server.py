@@ -8,12 +8,10 @@ from urllib.parse import urlparse
 import requests
 
 PORT = int(os.getenv("PORT", "8001"))
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini").lower()
+LLM_PROVIDER = "groq"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
-
+GROQ_API_KEY = "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"
 
 def get_meal_bucket(hour: int) -> str:
     if 6 <= hour < 11:
@@ -53,14 +51,22 @@ def get_fallback_reason(restaurant: dict, hour: int) -> str:
 
 
 def build_prompt(payload: dict) -> str:
+    if not isinstance(payload, dict):
+        payload = {}
+
     restaurant = payload.get("restaurant", {})
+    if not isinstance(restaurant, dict):
+        restaurant = {}
+
     name = restaurant.get("name", "이 식당")
     category = restaurant.get("categoryKey") or restaurant.get("category") or "기타"
     distance = restaurant.get("distance", "500m 이내")
     rating = restaurant.get("rating", 4.0)
     reviewCount = restaurant.get("reviewCount", 0)
-    hour = payload.get("hour", 12)
+    hour = int(payload.get("hour", 12) or 12)
     history = payload.get("history", [])
+    if not isinstance(history, list):
+        history = []
     meal = get_meal_bucket(hour)
 
     history_text = ", ".join(history) if history else "최근에 특별한 선호 정보가 아직 없습니다"
@@ -114,6 +120,7 @@ def call_gemini(prompt: str) -> str | None:
 
 def call_groq(prompt: str) -> str | None:
     if not GROQ_API_KEY:
+        print("GROQ_CALL_SKIPPED: missing key")
         return None
 
     payload = {
@@ -207,5 +214,6 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    print(f"Gemini proxy server started at http://127.0.0.1:{PORT}")
+    print(f"LLM proxy server started at http://127.0.0.1:{PORT}")
+    print(f"provider={LLM_PROVIDER} groq_key_loaded={bool(GROQ_API_KEY)} gemini_key_loaded={bool(GEMINI_API_KEY)}")
     server.serve_forever()
