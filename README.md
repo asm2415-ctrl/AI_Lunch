@@ -29,6 +29,7 @@ flowchart LR
 - JavaScript (Vanilla)
 - Kakao Maps JavaScript SDK
 - Live Server (로컬 실행용)
+- Groq API (llama-3.3-70b-versatile)
 
 ## ▶️ 실행 방법
 
@@ -40,10 +41,10 @@ flowchart LR
 
 ## 🤖 AI 사용 내역
 
-현재 버전은 실제 LLM API를 직접 호출하는 방식은 아니며, 위치 기반 추천과 “AI 추천 이유” 형식의 문구를 통해 사용자 경험을 강화한 형태입니다.
+카카오 지도 API로 검색된 주변 식당 정보를 바탕으로, Groq API(llama-3.3-70b-versatile)를 호출하여 맞춤형 추천 사유 문구를 실시간으로 생성합니다.
 
 - 💡 현재 구현: 거리 기반 추천 + 랜덤 추천 결과 표시
-- 🚀 확장 가능성: 향후 OpenAI, Gemini 등 AI API 연동으로 추천 설명을 더 정교하게 개선할 수 있습니다.
+- 🚀 확장 가능성: 다중 가중치 기반 AI 사용자 맞춤형 추천 알고리즘 도입
 
 ## 📄 라이선스
 
