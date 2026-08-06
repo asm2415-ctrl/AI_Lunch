@@ -6,12 +6,15 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 PORT = int(os.getenv("PORT", "8001"))
 LLM_PROVIDER = "groq"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
-GROQ_API_KEY = "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"
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
 def get_meal_bucket(hour: int) -> str:
     if 6 <= hour < 11:
