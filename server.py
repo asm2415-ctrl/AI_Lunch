@@ -124,7 +124,7 @@ def call_groq(prompt: str) -> str | None:
         return None
 
     payload = {
-        "model": GROQ_MODEL,
+        "model": "llama-3.3-70b-versatile",
         "messages": [
             {
                 "role": "system",
