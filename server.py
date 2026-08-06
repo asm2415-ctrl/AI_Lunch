@@ -76,12 +76,17 @@ def build_prompt(payload: dict) -> str:
     history_text = ", ".join(history) if history else "최근에 특별한 선호 정보가 아직 없습니다"
 
     return (
-        f"너는 음식점 추천 설명을 짧고 친절하게 쓰는 도우미다. "
-        f"아래 식당을 {meal} 시간대에 맞춰 한두 문장으로 추천 이유를 써줘. "
-        f"식당명: {name}, 종류: {category}, 거리: {distance}, 평점: {rating}, 리뷰수: {reviewCount}. "
-        f"사용자의 최근 선호 카테고리: {history_text}. "
-        f"절대 가중치 숫자나 내부 알고리즘 설명을 쓰지 말고, 시간대와 음식 성격에 맞는 자연스러운 추천 이유만 써줘. "
-        f"답변은 한국어 2문장 이내로만 해줘."
+        f"너는 맛집을 잘 알고 친절하게 추천해주는 미식 가이드다. "
+        f"아래 식당을 {meal} 시간대에 맞춰 자연스럽고 센스 있게 추천해줘.\n"
+        f"- 식당명: {name}\n"
+        f"- 카테고리: {category}\n"
+        f"- 거리: {distance}\n"
+        f"- 평점: {rating}\n"
+        f"조건:\n"
+        f"1. '저녁 시간에 ~를 추천합니다' 같은 로봇 같은 고정 틀을 절대 쓰지 마라.\n"
+        f"2. 거리나 음식 종류, 시간대 특징을 살려 당장 가고 싶게 만들어라.\n"
+        f"3. 절대 가중치나 수치를 언급하지 마라.\n"
+        f"4. 한국어 2문장 이내로 자연스럽게 써라."
     )
 
 
@@ -133,14 +138,14 @@ def call_groq(prompt: str) -> str | None:
         "messages": [
             {
                 "role": "system",
-                "content": "너는 음식점 추천 설명을 짧고 친절하게 쓰는 도우미다. 한국어로 2문장 이내 답변해줘."
+                "content": "너는 미식가 큐레이터다. 로봇처럼 상투적인 문구를 쓰지 말고, 친구에게 말하듯 친근하고 매력적으로 한국어 2문장 이내로 작성해라."
             },
             {
                 "role": "user",
                 "content": prompt
             }
         ],
-        "temperature": 0.2
+        "temperature": 0.7
     }
 
     try:
