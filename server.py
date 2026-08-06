@@ -16,6 +16,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
+
 def get_meal_bucket(hour: int) -> str:
     if 6 <= hour < 11:
         return "morning"
@@ -126,8 +127,9 @@ def call_groq(prompt: str) -> str | None:
         print("GROQ_CALL_SKIPPED: missing key")
         return None
 
+    # 가장 빠른 표준 Groq 모델인 llama-3.1-8b-instant 적용
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "llama-3.1-8b-instant",
         "messages": [
             {
                 "role": "system",
@@ -146,7 +148,7 @@ def call_groq(prompt: str) -> str | None:
             "https://api.groq.com/openai/v1/chat/completions",
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {GROQ_API_KEY}"
+                "Authorization": f"Bearer {GROQ_API_KEY.strip()}"
             },
             json=payload,
             timeout=12
@@ -158,9 +160,12 @@ def call_groq(prompt: str) -> str | None:
             message = choice.get("message") or {}
             text = message.get("content")
             if text:
+                print("★ GROQ API 호출 성공!")
                 return text.strip()
     except requests.RequestException as exc:
-        print("GROQ_REQUEST_ERROR", exc)
+        print("GROQ_REQUEST_ERROR:", exc)
+        if hasattr(exc, 'response') and exc.response is not None:
+            print("Groq Response Body:", exc.response.text)
         return None
 
     return None
@@ -207,6 +212,7 @@ class Handler(BaseHTTPRequestHandler):
         reason = call_llm(prompt)
 
         if not reason:
+            print("★ Groq 호출 실패로 Fallback 대체 문구가 출력되었습니다.")
             reason = get_fallback_reason(payload.get("restaurant", {}), payload.get("hour", 12))
 
         self._send_json(200, {"reason": reason})
